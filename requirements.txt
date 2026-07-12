@@ -1,0 +1,15 @@
+opencv-python==4.8.1.78
+face-recognition==1.3.0
+numpy==1.26.4
+pyserial==3.5
+pyttsx3==2.90
+cmake==3.27.7
+
+# --- Added: required for object/emotion/scene detection in
+# smart_glasses_phone_fixed.py (not part of your original list) ---
+ultralytics==8.0.196
+deepface==0.0.79
+requests==2.31.0
+
+# Windows only - required for reliable pyttsx3/SAPI5 voice output
+pywin32==306; sys_platform == "win32"

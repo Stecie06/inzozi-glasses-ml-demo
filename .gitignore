@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.dll
+*.exe
+
+# Virtual Environment
+smartglasses_env/
+venv/
+env/
+
+# Build artifacts
+dist/
+build/
+*.spec
+
+# Large model files
+*.pkl
+*.h5
+*.pt
+*.pth
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+*.tmp
+
+# Test results
+test_results/
+dist/
+build/
+smartglasses_env/
+*.exe
+*.dll
+*.pyd
