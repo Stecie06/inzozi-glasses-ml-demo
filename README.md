@@ -16,6 +16,9 @@ Inzozi Glasses (meaning "Dreams" in Kinyarwanda) is an offline wearable smart sy
 ### Live Demo
 https://drive.google.com/file/d/1wEqMSUo27A3i6y9A18dbjFsulxuEa64-/view?usp=drive_link
 
+### Final Product Demo 
+[https://drive.google.com/file/d/1mpUiJL8WEMc0P5mWOZPh33JizW_letGI/view?usp=](https://drive.google.com/file/d/1mpUiJL8WEMc0P5mWOZPh33JizW_letGI/view?usp=drive_link)
+
 Open `index.html` in any modern browser to see the complete simulation.
 
 ### How to Use
