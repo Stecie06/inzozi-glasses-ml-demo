@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+"""
+INZOZI GLASSES - COMPLETE VERSION WITH ALL FEATURES
+1. Face Recognition (Known + Unknown Faces) - BILINGUAL SUPPORT
+2. Bilingual TTS (English + Kinyarwanda - PowerShell SAPI)
+3. Object Detection (YOLOv8)
+4. Emotion Detection (DeepFace)
+5. Scene Recognition
+6. Arduino Distance Alerts
+"""
+
+# ============================================================
+# CRITICAL: Import torch FIRST for safe globals
+# ============================================================
+import torch
+import torch.nn as nn
+
 import cv2
 import numpy as np
 import time
@@ -5,43 +22,212 @@ import os
 import subprocess
 import requests
 from pathlib import Path
-
-# ---- Additional imports required by the base class below ----
 import re
 import glob
 import threading
 import queue
+import sys
 
+# ============================================================
+# KINYARWANDA TRANSLATIONS
+# ============================================================
+KINYARWANDA = {
+    # Person detection
+    'person_detected': 'Muntu yagaragaye',
+    'unknown_person': 'Muntu utazwi',
+    
+    # Emotions
+    'happy': 'arishimye',
+    'sad': 'arababaye',
+    'angry': 'yarakaye',
+    'surprise': 'atangaye',
+    'fear': 'afite ubwoba',
+    'disgust': 'arakubita',
+    'neutral': 'aratuje',
+    
+    # Distance alerts
+    'caution': 'Itondere',
+    'object': 'ikintu',
+    'centimeters': 'santimetero',
+    'ahead': 'imbere',
+    
+    # Scene
+    'outdoor': 'Hanze',
+    'indoor': 'Mu nzu',
+    
+    # System
+    'system_ready': 'Sisitemu iteguye',
+    'ml_ready': 'Sisitemu ifite ubuhanga bwa machine learning',
+    'goodbye': 'Murabeho',
+    
+    # Direction
+    'left': 'Erekeza ibumoso',
+    'right': 'Erekeza iburyo',
+    'straight': 'Genda gatoro',
+    'stop': 'Hagarara'
+}
+
+# ============================================================
+# FIX 1: Handle PyInstaller path resolution
+# ============================================================
+def get_project_root():
+    """Get the correct project root whether running as script or bundled EXE"""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    else:
+        return os.path.dirname(os.path.abspath(__file__))
+
+PROJECT_ROOT = get_project_root()
+
+# ============================================================
+# FIX 2: Comprehensive safe globals for PyTorch 2.6+
+# ============================================================
+def register_safe_globals():
+    try:
+        import ultralytics.nn.tasks
+        import ultralytics.nn.modules
+        
+        torch.serialization.add_safe_globals([
+            ultralytics.nn.tasks.DetectionModel,
+            ultralytics.nn.modules.Conv,
+            ultralytics.nn.modules.Bottleneck,
+            ultralytics.nn.modules.C2f,
+            ultralytics.nn.modules.SPPF,
+            ultralytics.nn.modules.Detect,
+            ultralytics.nn.modules.Segment,
+            ultralytics.nn.modules.Classify,
+            nn.Sequential,
+            nn.Module,
+            nn.Conv2d,
+            nn.BatchNorm2d,
+            nn.ReLU,
+            nn.MaxPool2d,
+            nn.AdaptiveAvgPool2d,
+            nn.Flatten,
+            nn.Linear,
+            nn.Dropout,
+        ])
+        print("✅ Safe globals registered for YOLO")
+        return True
+    except Exception as e:
+        print(f"⚠️ Could not register safe globals: {e}")
+        return False
+
+register_safe_globals()
+
+# ============================================================
+# TRY IMPORTS
+# ============================================================
 try:
     import face_recognition
 except ImportError:
     face_recognition = None
-    print(" face_recognition not installed. Install with: pip install face_recognition")
+    print(" face_recognition not installed")
 
 try:
     import serial
 except ImportError:
     serial = None
-    print(" pyserial not installed. Install with: pip install pyserial")
+    print(" pyserial not installed")
 
 try:
     import pyttsx3
 except ImportError:
     pyttsx3 = None
-    print(" pyttsx3 not installed. Install with: pip install pyttsx3")
+    print(" pyttsx3 not installed")
 
 try:
     import pythoncom
 except ImportError:
     pythoncom = None
 
+# ============================================================
+# BILINGUAL TTS - PowerShell SAPI (Most Reliable on Windows)
+# ============================================================
+def train_kinyarwanda_tts():
+    print("\n🎤 Bilingual TTS: Using PowerShell SAPI")
+    return False
+
+class BilingualTTSWrapper:
+    """Wrapper for bilingual TTS using PowerShell SAPI"""
+    
+    def __init__(self):
+        self.is_loaded = True
+        print("✅ Bilingual TTS initialized (PowerShell SAPI)")
+    
+    def speak(self, text):
+        """Speak text using Windows PowerShell SAPI"""
+        try:
+            escaped = text.replace('"', '`"')
+            cmd = f'powershell -Command "Add-Type -AssemblyName System.Speech; $s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Speak(\\\"{escaped}\\\")"'
+            subprocess.run(cmd, shell=True, capture_output=True, timeout=5)
+            print(f"🔊 TTS: {text}")
+            return True
+        except subprocess.TimeoutExpired:
+            print(f"⚠️ TTS timeout for: {text}")
+            return False
+        except Exception as e:
+            print(f"⚠️ TTS error: {e}")
+            return False
+
+    def load_model(self):
+        self.is_loaded = True
+        return True
 
 # ============================================================
-# PHONE CAMERA CLASS (FIXED: threaded reader + auto-reconnect)
+# UNKNOWN FACE DETECTOR - BILINGUAL
+# ============================================================
+class UnknownFaceDetector:
+    def __init__(self):
+        self.unknown_faces = {}
+        self.unknown_threshold = 0.6
+        self.last_unknown_alert = 0
+        self.unknown_cooldown = 10
+        self.unknown_count = 0
+    
+    def check_face_known(self, face_encoding, known_encodings, known_names):
+        if not known_encodings:
+            return "Unknown", 1.0
+        
+        distances = face_recognition.face_distance(known_encodings, face_encoding)
+        best_idx = np.argmin(distances)
+        
+        if distances[best_idx] < 0.6:
+            return known_names[best_idx], distances[best_idx]
+        return "Unknown", distances[best_idx]
+    
+    def speak_unknown(self, voice_engine, face_count=1):
+        current_time = time.time()
+        if current_time - self.last_unknown_alert > self.unknown_cooldown:
+            self.unknown_count += 1
+            
+            if voice_engine.use_kinyarwanda:
+                if face_count == 1:
+                    message = "Muntu utazwi yagaragaye"
+                else:
+                    message = f"Abantu {face_count} batazwi bagaragaye"
+            else:
+                if face_count == 1:
+                    message = "Unknown person detected"
+                else:
+                    message = f"{face_count} unknown people detected"
+            
+            voice_engine.speak(message, "unknown_face", cooldown=10, force=True)
+            self.last_unknown_alert = current_time
+            print(f"🔍 {message}")
+            return True
+        return False
+    
+    def get_unknown_count(self):
+        return self.unknown_count
+    
+    def reset_unknown_count(self):
+        self.unknown_count = 0
+
+# ============================================================
+# PHONE CAMERA CLASS
 # ============================================================
 class PhoneCamera:
-
-    # Common IP Webcam endpoints, tried in order until one works
     CANDIDATE_PATHS = ["/video", "/videofeed", ""]
     FRAME_ROTATION = cv2.ROTATE_90_COUNTERCLOCKWISE
 
@@ -79,13 +265,12 @@ class PhoneCamera:
                     self.cap = cap
                     self.connected_url = url
                     print(f" Phone camera connected: {url}")
-                    print(f" Frame rotation correction: {self.FRAME_ROTATION} "
-                          f"(change PhoneCamera.FRAME_ROTATION if your video looks sideways)")
+                    print(f" Frame rotation correction: {self.FRAME_ROTATION}")
                     self._start_reader_thread()
                     return
             cap.release()
 
-        print(" Could not reach phone stream, falling back to local webcam (index 0)")
+        print(" Could not reach phone stream, falling back to local webcam")
         cap = cv2.VideoCapture(0)
         if cap.isOpened():
             self.cap = cap
@@ -180,13 +365,10 @@ class PhoneCamera:
             self.cap.release()
             self.cap = None
 
-
 # ============================================================
-# ARDUINO SERIAL READER CLASS
+# ARDUINO SERIAL READER
 # ============================================================
 class ArduinoReader:
-    """Reads distance data from an Arduino over serial."""
-
     def __init__(self, port='COM12', baudrate=9600, timeout=1):
         self.port = port
         self.baudrate = baudrate
@@ -195,7 +377,7 @@ class ArduinoReader:
         self.current_distance = 999
 
         if serial is None:
-            print(" pyserial not available, Arduino distance features disabled")
+            print(" pyserial not available")
             return
 
         try:
@@ -205,7 +387,6 @@ class ArduinoReader:
             print(f" Arduino connected on {port}")
         except Exception as e:
             print(f" Could not connect to Arduino on {port}: {e}")
-            print("   Distance alerts will be disabled")
             self.connected = False
 
     def read(self):
@@ -230,10 +411,7 @@ class ArduinoReader:
 
         upper_msg = msg.upper()
         if any(marker in upper_msg for marker in self.RESET_MARKERS):
-            print(f" [ARDUINO RESET DETECTED] '{msg}' - the Arduino just "
-                  f"(re)booted mid-session. Check the USB cable/power "
-                  f"connection; the last known distance is being kept "
-                  f"({self.current_distance} cm) until a real reading arrives.")
+            print(f" [ARDUINO RESET DETECTED] '{msg}'")
             return
 
         match = self.DISTANCE_PATTERN.search(msg)
@@ -245,7 +423,7 @@ class ArduinoReader:
             except ValueError:
                 pass
         else:
-            print(f" [ARDUINO PARSED] line did not match a distance reading, ignored")
+            print(f" [ARDUINO PARSED] ignored")
 
     def close(self):
         if self.serial_conn is not None:
@@ -255,12 +433,10 @@ class ArduinoReader:
                 pass
         self.connected = False
 
-
 # ============================================================
-# VOICE / TTS ENGINE CLASS
+# VOICE ENGINE - BILINGUAL
 # ============================================================
 class VoiceEngine:
-
     MAX_QUEUE_SIZE = 4
 
     def __init__(self, use_kinyarwanda=False):
@@ -268,6 +444,13 @@ class VoiceEngine:
         self.voice_enabled = True
         self.last_spoken = {}
         self._lock = threading.Lock()
+        
+        self.bilingual_tts = None
+        try:
+            self.bilingual_tts = BilingualTTSWrapper()
+            print("✅ Bilingual TTS initialized")
+        except Exception as e:
+            print(f"⚠️ Bilingual TTS error: {e}")
 
         self.engine_available = pyttsx3 is not None
         if not self.engine_available:
@@ -302,8 +485,17 @@ class VoiceEngine:
             text = self._queue.get()
             if text is None:
                 break
+            
+            if self.bilingual_tts:
+                try:
+                    self.bilingual_tts.speak(text)
+                    print(f" [VOICE] {text}")
+                    self._queue.task_done()
+                    continue
+                except:
+                    pass
+            
             try:
-                # Fresh engine every time - this is the actual fix.
                 engine = pyttsx3.init()
                 engine.setProperty('rate', 150)
                 engine.say(text)
@@ -334,14 +526,14 @@ class VoiceEngine:
 
         print(f" [VOICE] {text}")
 
-        if self.engine_available:
+        if self.engine_available or self.bilingual_tts:
             try:
                 self._queue.put_nowait(text)
             except queue.Full:
                 try:
                     dropped = self._queue.get_nowait()
                     self._queue.task_done()
-                    print(f" [VOICE QUEUE FULL] dropped stale message: '{dropped}'")
+                    print(f" [VOICE QUEUE FULL] dropped stale: '{dropped}'")
                 except queue.Empty:
                     pass
                 try:
@@ -350,7 +542,6 @@ class VoiceEngine:
                     pass
 
     def speak_immediate(self, text):
-        """Speak immediately without any cooldown."""
         self.speak(text, key="immediate", cooldown=0, force=True)
 
     def stop(self):
@@ -365,14 +556,11 @@ class VoiceEngine:
                     pass
                 self._queue.put_nowait(None)
 
-
 # ============================================================
-# BASE CLASS: SMART GLASSES COMPLETE
+# SMART GLASSES COMPLETE
 # ============================================================
 class SmartGlassesComplete:
-    """Base system: phone camera + Arduino distance + face recognition + voice."""
-
-    KNOWN_FACES_DIR = "known_faces"
+    KNOWN_FACES_DIR = os.path.join(PROJECT_ROOT, 'known_faces')
     DISTANCE_ALERT_THRESHOLD_CM = 50
     DISTANCE_ALERT_COOLDOWN = 6
 
@@ -387,6 +575,7 @@ class SmartGlassesComplete:
 
         self.known_face_encodings = []
         self.known_face_names = []
+        self.unknown_detector = UnknownFaceDetector()
         self.load_known_faces()
 
         self.frame_count = 0
@@ -396,7 +585,10 @@ class SmartGlassesComplete:
 
         print("=" * 70)
 
-        startup_msg = "System ready with face recognition" if not use_kinyarwanda else "Sisitemu iteguye"
+        if use_kinyarwanda:
+            startup_msg = KINYARWANDA['system_ready']
+        else:
+            startup_msg = "System ready with face recognition"
         self.voice.speak_immediate(startup_msg)
 
     def load_known_faces(self):
@@ -404,7 +596,7 @@ class SmartGlassesComplete:
         self.known_face_names = []
 
         if face_recognition is None:
-            print(" face_recognition not installed - cannot load known faces")
+            print(" face_recognition not installed")
             return
 
         if not os.path.isdir(self.KNOWN_FACES_DIR):
@@ -444,20 +636,17 @@ class SmartGlassesComplete:
             return
 
         if self.voice.use_kinyarwanda:
-            message = f"Itonde, hari ikintu ku ntera ya santimetero {distance}"
+            message = f"{KINYARWANDA['caution']}, {KINYARWANDA['object']} ku ntera ya {distance} {KINYARWANDA['centimeters']}"
         else:
             message = f"Caution, object {distance} centimeters ahead"
 
         self.voice.speak(message, "distance_alert", cooldown=self.DISTANCE_ALERT_COOLDOWN, force=True)
         self._last_distance_alert = current_time
 
-
 # ============================================================
-# OBJECT DETECTION CLASS
+# OBJECT DETECTOR
 # ============================================================
 class ObjectDetector:
-    """Handles object detection using YOLOv8"""
-
     def __init__(self):
         self.model = None
         self.class_names = []
@@ -477,11 +666,9 @@ class ObjectDetector:
             print(" YOLOv8 loaded successfully!")
             self.class_names = self.model.names
 
-        except ImportError:
-            print(" Ultralytics not installed. Install with: pip install ultralytics")
-            print("   Object detection will be disabled")
         except Exception as e:
             print(f" Error loading YOLO: {e}")
+            self.is_available = False
 
     def detect_objects(self, frame, confidence_threshold=0.5):
         if not self.is_available or self.model is None:
@@ -489,7 +676,6 @@ class ObjectDetector:
 
         try:
             results = self.model(frame, conf=confidence_threshold, verbose=False)
-
             detected_objects = []
             boxes = []
 
@@ -534,22 +720,28 @@ class ObjectDetector:
                     self.last_detections[class_name] = current_time
 
         if spoken_objects:
-            if len(spoken_objects) == 1:
-                message = f"Detected {spoken_objects[0]}"
-            elif len(spoken_objects) == 2:
-                message = f"Detected {spoken_objects[0]} and {spoken_objects[1]}"
+            if voice_engine.use_kinyarwanda:
+                if len(spoken_objects) == 1:
+                    message = f"Yamuwe: {spoken_objects[0]}"
+                elif len(spoken_objects) == 2:
+                    message = f"Yamuwe: {spoken_objects[0]} na {spoken_objects[1]}"
+                else:
+                    message = f"Yamuwe: {', '.join(spoken_objects[:-1])}, na {spoken_objects[-1]}"
             else:
-                message = f"Detected {', '.join(spoken_objects[:-1])}, and {spoken_objects[-1]}"
+                if len(spoken_objects) == 1:
+                    message = f"Detected {spoken_objects[0]}"
+                elif len(spoken_objects) == 2:
+                    message = f"Detected {spoken_objects[0]} and {spoken_objects[1]}"
+                else:
+                    message = f"Detected {', '.join(spoken_objects[:-1])}, and {spoken_objects[-1]}"
 
             voice_engine.speak(message, "object_detection", cooldown=0, force=True)
             print(f" {message}")
 
 # ============================================================
-# EMOTION DETECTION CLASS
+# EMOTION DETECTOR - BILINGUAL
 # ============================================================
 class EmotionDetector:
-    """Handles facial emotion detection using DeepFace or FER"""
-
     def __init__(self):
         self.is_available = False
         self.emotion_model = None
@@ -569,9 +761,9 @@ class EmotionDetector:
                 self.is_available = True
                 print(" FER emotion detection loaded!")
             except ImportError:
-                print(" Emotion detection not available. Install with:")
-                print("   pip install deepface  # OR")
-                print("   pip install fer")
+                print(" Emotion detection not available.")
+        except Exception as e:
+            print(f" Emotion detection error: {e}")
 
     def detect_emotion(self, face_image):
         if not self.is_available:
@@ -602,40 +794,37 @@ class EmotionDetector:
         return None
 
     def speak_emotion(self, person_name, emotion, voice_engine):
-        """Speak detected emotion - force=True so every detection is announced"""
         if not emotion or not person_name:
             return
 
-        current_time = time.time()
-        key = f"emotion_{person_name}"
-
-        emotion_messages = {
-            'happy': "looks happy",
-            'sad': "looks sad",
-            'angry': "looks angry",
-            'surprise': "looks surprised",
-            'fear': "looks scared",
-            'disgust': "looks disgusted",
-            'neutral': "looks neutral"
-        }
-
-        message = emotion_messages.get(emotion.lower(), f"looks {emotion}")
-
-        voice_engine.speak(f"{person_name} {message}", key, cooldown=8, force=True)
-        self.last_emotions[key] = current_time
+        if voice_engine.use_kinyarwanda:
+            emotion_messages = {
+                'happy': KINYARWANDA['happy'],
+                'sad': KINYARWANDA['sad'],
+                'angry': KINYARWANDA['angry'],
+                'surprise': KINYARWANDA['surprise'],
+                'fear': KINYARWANDA['fear'],
+                'disgust': KINYARWANDA['disgust'],
+                'neutral': KINYARWANDA['neutral']
+            }
+            kinyarwanda_msg = emotion_messages.get(emotion.lower(), emotion)
+            message = f"{person_name} aragira {kinyarwanda_msg}"
+        else:
+            message = f"{person_name} looks {emotion}"
+        
+        voice_engine.speak(message, f"emotion_{person_name}", cooldown=8, force=True)
+        self.last_emotions[person_name] = time.time()
         print(f" {person_name}: {emotion}")
 
 # ============================================================
-# SCENE RECOGNITION CLASS
+# SCENE RECOGNIZER - BILINGUAL
 # ============================================================
 class SceneRecognizer:
-    """Handles scene/place recognition using YOLO or CLIP"""
-
     def __init__(self):
         self.is_available = False
         self.model = None
         self.last_scene = None
-        self.scene_cooldown = 8  # seconds - matches SCENE_CHECK_INTERVAL in run()
+        self.scene_cooldown = 8
 
         try:
             from ultralytics import YOLO
@@ -646,8 +835,9 @@ class SceneRecognizer:
             self.outdoor_indicators = ['person', 'car', 'tree', 'sky', 'building', 'road']
             self.indoor_indicators = ['chair', 'table', 'tv', 'person', 'book', 'phone']
 
-        except ImportError:
-            print(" Scene recognition not available")
+        except Exception as e:
+            print(f" Scene recognition not available: {e}")
+            self.is_available = False
 
     def classify_scene(self, frame):
         if not self.is_available or self.model is None:
@@ -689,17 +879,22 @@ class SceneRecognizer:
         if self.last_scene is None or \
            current_time - self.last_scene > self.scene_cooldown:
 
-            voice_engine.speak(f"You are {scene_type.lower()}", "scene", cooldown=15, force=True)
+            if voice_engine.use_kinyarwanda:
+                if scene_type == "Outdoor":
+                    msg = KINYARWANDA['outdoor']
+                else:
+                    msg = KINYARWANDA['indoor']
+                voice_engine.speak(f"Uri {msg}", "scene", cooldown=15, force=True)
+            else:
+                voice_engine.speak(f"You are {scene_type.lower()}", "scene", cooldown=15, force=True)
+            
             self.last_scene = current_time
             print(f" Scene: {scene_type}")
 
 # ============================================================
-# MAIN SMART GLASSES WITH ML INTEGRATION
+# MAIN SMART GLASSES WITH ML - BILINGUAL
 # ============================================================
-
 class SmartGlassesWithML(SmartGlassesComplete):
-    """Extended smart glasses with ML capabilities"""
-
     def __init__(self, phone_ip="192.168.2.102", arduino_port='COM12',
                  use_kinyarwanda=False, enable_object_detection=True,
                  enable_emotion_detection=True):
@@ -722,15 +917,16 @@ class SmartGlassesWithML(SmartGlassesComplete):
         print(f"   Object Detection: {'✅' if self.object_detector and self.object_detector.is_available else '❌'}")
         print(f"   Emotion Detection: {'✅' if self.emotion_detector and self.emotion_detector.is_available else '❌'}")
         print(f"   Scene Recognition: {'✅' if self.scene_recognizer and self.scene_recognizer.is_available else '❌'}")
+        print(f"   Unknown Faces: ✅")
+        print(f"   Bilingual TTS: {'✅' if use_kinyarwanda else 'English'}")
         print("=" * 70)
 
         if use_kinyarwanda:
-            self.voice.speak_immediate("Sisitemu ifite ubuhanga bwa machine learning")
+            self.voice.speak_immediate(KINYARWANDA['ml_ready'])
         else:
             self.voice.speak_immediate("System ready with machine learning capabilities")
 
     def run(self):
-        """Main system loop with ML integration"""
         print("\n Starting ML-enhanced smart glasses...")
 
         if not self.phone_camera.cap:
@@ -739,9 +935,11 @@ class SmartGlassesWithML(SmartGlassesComplete):
 
         print("\n SYSTEM ACTIVE WITH ML FEATURES!")
         print("    Face Recognition: ACTIVE")
+        print("    Unknown Faces: ACTIVE")
         print("    Object Detection: ACTIVE")
         print("    Emotion Detection: ACTIVE")
         print("    Scene Recognition: ACTIVE")
+        print(f"    Language: {'Kinyarwanda' if self.voice.use_kinyarwanda else 'English'}")
         print("\n CONTROLS:")
         print("   Press 'Q' - Quit")
         print("   Press 'V' - Toggle voice ON/OFF")
@@ -758,7 +956,8 @@ class SmartGlassesWithML(SmartGlassesComplete):
 
         last_spoken_face = {}
         last_scene_check = [0.0]
-        SCENE_CHECK_INTERVAL = 8.0  # seconds
+        SCENE_CHECK_INTERVAL = 8.0
+        unknown_face_count = 0
 
         try:
             while self.running:
@@ -769,7 +968,7 @@ class SmartGlassesWithML(SmartGlassesComplete):
                     if consecutive_missed_frames == 1:
                         print(" Waiting for camera frame...")
                     if consecutive_missed_frames > MAX_CONSECUTIVE_MISSES:
-                        print(" Lost connection to phone camera (no frames for too long)")
+                        print(" Lost connection to phone camera")
                         break
                     time.sleep(0.03)
                     continue
@@ -783,7 +982,8 @@ class SmartGlassesWithML(SmartGlassesComplete):
                     if msg:
                         self.arduino.process_message(msg)
 
-                if self.frame_count % 3 == 0:
+                # Face Recognition with Unknown Detection - BILINGUAL
+                if self.frame_count % 3 == 0 and face_recognition:
                     small_frame = cv2.resize(frame, (0, 0), fx=0.75, fy=0.75)
                     rgb_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                     rgb_small = np.ascontiguousarray(rgb_small)
@@ -793,10 +993,11 @@ class SmartGlassesWithML(SmartGlassesComplete):
                     )
 
                     scale_back = 1.0 / 0.75
+                    current_time = time.time()
+                    unknown_count_this_frame = 0
 
                     if face_locations:
                         face_encodings = face_recognition.face_encodings(rgb_small, face_locations)
-                        current_time = time.time()
 
                         for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
                             top = int(top * scale_back)
@@ -804,31 +1005,42 @@ class SmartGlassesWithML(SmartGlassesComplete):
                             bottom = int(bottom * scale_back)
                             left = int(left * scale_back)
 
-                            name = "Unknown"
-
                             if self.known_face_encodings:
                                 distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
                                 best_idx = np.argmin(distances)
 
                                 if distances[best_idx] < 0.6:
                                     name = self.known_face_names[best_idx]
+                                    color = (0, 255, 0)
+                                    is_known = True
+                                else:
+                                    name = "Unknown"
+                                    color = (0, 255, 255)
+                                    is_known = False
+                                    unknown_count_this_frame += 1
+                            else:
+                                name = "Unknown"
+                                color = (0, 255, 255)
+                                is_known = False
+                                unknown_count_this_frame += 1
 
-                                    speech_key = f"face_{name}"
-                                    if speech_key not in last_spoken_face or \
-                                       current_time - last_spoken_face[speech_key] > 8:
+                            # BILINGUAL SPEAK: Known Face
+                            if is_known:
+                                speech_key = f"face_{name}"
+                                if speech_key not in last_spoken_face or \
+                                   current_time - last_spoken_face[speech_key] > 8:
 
-                                        if self.arduino.current_distance > 0 and self.arduino.current_distance < 200:
-                                            if self.voice.use_kinyarwanda:
-                                                announcement = f"{name} ari kure ya santimetero {self.arduino.current_distance}"
-                                            else:
-                                                announcement = f"{name} is {self.arduino.current_distance} centimeters away"
+                                    if self.arduino.current_distance > 0 and self.arduino.current_distance < 200:
+                                        if self.voice.use_kinyarwanda:
+                                            announcement = f"{name} ari kure ya santimetero {self.arduino.current_distance}"
                                         else:
-                                            announcement = name
+                                            announcement = f"{name} is {self.arduino.current_distance} centimeters away"
+                                    else:
+                                        announcement = name
 
-                                        self.voice.speak(announcement, speech_key, cooldown=8, force=True)
-                                        last_spoken_face[speech_key] = current_time
+                                    self.voice.speak(announcement, speech_key, cooldown=8, force=True)
+                                    last_spoken_face[speech_key] = current_time
 
-                                    # ML: EMOTION DETECTION - every detection announced
                                     if self.ml_enabled and self.emotion_detector and self.emotion_detector.is_available:
                                         face_crop = frame[top:bottom, left:right]
                                         if face_crop.size > 0:
@@ -837,21 +1049,35 @@ class SmartGlassesWithML(SmartGlassesComplete):
                                                 emotion, confidence = emotion_result
                                                 if confidence > 0.4:
                                                     self.emotion_detector.speak_emotion(name, emotion, self.voice)
+                            else:
+                                # BILINGUAL SPEAK: Unknown Face
+                                unknown_key = "unknown_face"
+                                if unknown_key not in last_spoken_face or \
+                                   current_time - last_spoken_face[unknown_key] > 8:
+                                    
+                                    if self.voice.use_kinyarwanda:
+                                        self.voice.speak("Muntu utazwi yagaragaye", "unknown", cooldown=5, force=True)
+                                    else:
+                                        self.voice.speak("Unknown person detected", "unknown", cooldown=5, force=True)
+                                    
+                                    last_spoken_face[unknown_key] = current_time
 
-                            color = (0, 255, 0) if name != "Unknown" else (0, 255, 255)
                             cv2.rectangle(frame, (left, top), (right, bottom), color, 3)
+                            cv2.putText(frame, name, (left, top-10), 
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-                            label = name
-                            label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
-                            cv2.rectangle(frame, (left, top - label_size[1] - 10), (left + label_size[0], top), color, -1)
-                            cv2.putText(frame, label, (left, top - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+                        if unknown_count_this_frame > 1:
+                            if self.voice.use_kinyarwanda:
+                                self.voice.speak(f"Abantu {unknown_count_this_frame} batazwi bagaragaye", "unknown_multi", cooldown=8, force=True)
+                            else:
+                                self.voice.speak(f"{unknown_count_this_frame} unknown people detected", "unknown_multi", cooldown=8, force=True)
 
                         if not face_locations:
                             self.speak_distance_alert()
                     else:
                         self.speak_distance_alert()
 
-                # ML: OBJECT DETECTION
+                # Object Detection - BILINGUAL
                 if self.ml_enabled and self.object_detector and self.object_detector.is_available:
                     if self.ml_frame_counter % self.detection_interval == 0:
                         objects, boxes = self.object_detector.detect_objects(frame)
@@ -865,7 +1091,7 @@ class SmartGlassesWithML(SmartGlassesComplete):
                                 cv2.putText(frame, label, (x1, y1 - 10),
                                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
 
-                # ML: SCENE RECOGNITION - time-based, not frame-count-based
+                # Scene Recognition - BILINGUAL
                 if self.ml_enabled and self.scene_recognizer and self.scene_recognizer.is_available:
                     if time.time() - last_scene_check[0] >= SCENE_CHECK_INTERVAL:
                         last_scene_check[0] = time.time()
@@ -873,25 +1099,29 @@ class SmartGlassesWithML(SmartGlassesComplete):
                         if scene_type != "Unknown":
                             self.scene_recognizer.speak_scene(scene_type, self.voice)
 
+                # UI Overlay
                 lang_display = "KINYARWANDA" if self.voice.use_kinyarwanda else "ENGLISH"
                 voice_status = "ON" if self.voice.voice_enabled else "OFF"
                 ml_status = "ON" if self.ml_enabled else "OFF"
 
                 overlay = frame.copy()
-                cv2.rectangle(overlay, (0, 0), (450, 180), (0, 0, 0), -1)
+                cv2.rectangle(overlay, (0, 0), (450, 200), (0, 0, 0), -1)
                 cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
 
                 y_offset = 30
                 cv2.putText(frame, f"SMART GLASSES with ML - {lang_display}", (10, y_offset),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
                 y_offset += 30
-                cv2.putText(frame, f"Distance: {self.arduino.current_distance} cm", (10, y_offset),
+                cv2.putText(frame, f"Intera: {self.arduino.current_distance} cm", (10, y_offset),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
                 y_offset += 25
-                cv2.putText(frame, f"Voice: {voice_status} | ML: {ml_status} | Faces: {len(self.known_face_names)}", (10, y_offset),
+                cv2.putText(frame, f"Ijwi: {voice_status} | ML: {ml_status}", (10, y_offset),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
                 y_offset += 25
-                cv2.putText(frame, "Q:Quit V:Voice L:Language R:Reload M:ML O:Objects E:Emotions", (10, y_offset),
+                cv2.putText(frame, f"Abantu: {len(self.known_face_names)} bizwi | Utazwi: {self.unknown_detector.unknown_count}", (10, y_offset),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                y_offset += 25
+                cv2.putText(frame, "Q:Va V:Ijwi L:Ururimi R:Kugarura M:ML O:Object E:Emotion", (10, y_offset),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
 
                 cv2.imshow('Smart Glasses - Face Recognition with ML', frame)
@@ -904,16 +1134,25 @@ class SmartGlassesWithML(SmartGlassesComplete):
                     self.voice.voice_enabled = not self.voice.voice_enabled
                     status = "ON" if self.voice.voice_enabled else "OFF"
                     print(f" Voice: {status}")
-                    self.voice.speak(f"Voice {status}", "voice_toggle", 0, force=True)
+                    if self.voice.use_kinyarwanda:
+                        self.voice.speak(f"Ijwi {status}", "voice_toggle", 0, force=True)
+                    else:
+                        self.voice.speak(f"Voice {status}", "voice_toggle", 0, force=True)
                 elif key == ord('l'):
                     self.voice.use_kinyarwanda = not self.voice.use_kinyarwanda
                     lang = "Kinyarwanda" if self.voice.use_kinyarwanda else "English"
                     print(f" Language: {lang}")
-                    self.voice.speak(f"Language changed to {lang}", "lang_change", 0, force=True)
+                    if self.voice.use_kinyarwanda:
+                        self.voice.speak("Ururimi rwahinduwe", "lang_change", 0, force=True)
+                    else:
+                        self.voice.speak(f"Language changed to {lang}", "lang_change", 0, force=True)
                 elif key == ord('r'):
                     print(" Reloading faces...")
                     self.load_known_faces()
-                    self.voice.speak("Faces reloaded", "reload", 0, force=True)
+                    if self.voice.use_kinyarwanda:
+                        self.voice.speak("Abantu basubijwe", "reload", 0, force=True)
+                    else:
+                        self.voice.speak("Faces reloaded", "reload", 0, force=True)
                 elif key == ord('m'):
                     self.ml_enabled = not self.ml_enabled
                     status = "ON" if self.ml_enabled else "OFF"
@@ -956,45 +1195,43 @@ if __name__ == "__main__":
     print("Phone Camera + Arduino + Face Recognition + ML")
     print("=" * 70)
 
+    print("\n🎤 Bilingual TTS: Using PowerShell SAPI")
+
     print("\n Checking ML dependencies...")
     try:
         import ultralytics
         print(" Ultralytics (YOLO) installed")
     except ImportError:
         print(" Ultralytics not installed")
-        print("   Run: pip install ultralytics")
 
     try:
         import deepface
         print(" DeepFace installed")
     except ImportError:
         print(" DeepFace not installed")
-        print("   Run: pip install deepface")
 
     print("\n" + "=" * 70)
 
     print("\n Select Language / Hitamo Ururimi:")
     print("   1. English")
-    print("   2. Kinyarwanda")
+    print("   2. Kinyarwanda (with TTS)")
     lang_choice = input("Enter choice (1 or 2): ").strip()
     use_kinyarwanda = (lang_choice == "2")
 
     print("\n Phone Camera Setup:")
     print("   Make sure IP Webcam app is running on your phone")
-    phone_ip = input("   Enter phone IP address (from IP Webcam): ").strip()
+    phone_ip = input("   Enter phone IP address: ").strip()
     if not phone_ip:
         phone_ip = "192.168.2.102"
         print(f"   Using default: {phone_ip}")
 
     print("\n Arduino Setup (optional):")
-    print("   If you don't have Arduino, just press Enter")
     arduino_port = input("   Enter COM port (e.g., COM12): ").strip()
     if not arduino_port:
         arduino_port = "COM9"
-        print("   Skipping Arduino (will try COM9)")
+        print(f"   Using default: {arduino_port}")
 
     print("\n ML Features Configuration:")
-    print("   Enable all ML features for best experience")
     enable_object = input("   Enable Object Detection? (y/n, default y): ").strip().lower() != 'n'
     enable_emotion = input("   Enable Emotion Detection? (y/n, default y): ").strip().lower() != 'n'
 
@@ -1009,7 +1246,6 @@ if __name__ == "__main__":
         enable_object_detection=enable_object,
         enable_emotion_detection=enable_emotion
     )
-
 
     try:
         system.run()

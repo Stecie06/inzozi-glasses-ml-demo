@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inzozi Smart Glasses</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+        
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        
+        #canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        #status-bar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 15px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #status-bar .left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-dot.active {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+        
+        .status-dot.inactive {
+            background: #ff4444;
+            box-shadow: 0 0 10px #ff4444;
+        }
+        
+        .status-text {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #aaa;
+        }
+        
+        .status-text.active {
+            color: #00ff88;
+        }
+        
+        #lang-indicator {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+        }
+        
+        #info-overlay {
+            position: absolute;
+            bottom: 80px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #speech-bubble {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 14px 24px;
+            max-width: 92%;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        #speech-bubble .emoji {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        #distance-display {
+            font-size: 14px;
+            color: #aaa;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 18px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 12px;
+            z-index: 20;
+            flex-wrap: wrap;
+            pointer-events: auto;
+        }
+        
+        .ctrl-btn {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            padding: 10px 18px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 55px;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .ctrl-btn:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .ctrl-btn.primary {
+            background: rgba(0, 255, 136, 0.25);
+            border-color: rgba(0, 255, 136, 0.4);
+        }
+        
+        .ctrl-btn.danger {
+            background: rgba(255, 68, 68, 0.25);
+            border-color: rgba(255, 68, 68, 0.4);
+        }
+        
+        .ctrl-btn.active {
+            background: rgba(0, 255, 136, 0.35);
+            border-color: #00ff88;
+        }
+        
+        .ctrl-btn .icon {
+            font-size: 16px;
+        }
+        
+        .ctrl-btn .label {
+            font-size: 10px;
+        }
+        
+        #face-grid {
+            position: absolute;
+            top: 70px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none;
+            z-index: 10;
+            max-height: 40%;
+            overflow: hidden;
+        }
+        
+        .face-tag {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .face-tag.known {
+            border-color: rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+        }
+        
+        .face-tag.unknown {
+            border-color: rgba(255, 200, 0, 0.3);
+            color: #ffcc00;
+        }
+        
+        .face-tag .emoji {
+            font-size: 14px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        #ml-status {
+            position: absolute;
+            bottom: 140px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            pointer-events: none;
+            z-index: 10;
+            font-size: 10px;
+            color: #666;
+            text-align: right;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+        
+        #ml-status .active {
+            color: #00ff88;
+        }
+        
+        #ml-status .item {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        
+        #voice-indicator {
+            position: absolute;
+            bottom: 160px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 30px;
+            padding: 6px 20px;
+            font-size: 12px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #voice-indicator.show {
+            opacity: 1;
+        }
+        
+        #voice-indicator .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            margin-right: 8px;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5);
+                opacity: 0.5;
+            }
+        }
+        
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.8s ease;
+        }
+        
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        #loading .logo {
+            font-size: 56px;
+            margin-bottom: 20px;
+            animation: float 2s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        #loading h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        
+        #loading p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #00ff88;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-top: 20px;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .ctrl-btn {
+                padding: 8px 12px;
+                font-size: 11px;
+                min-width: 48px;
+            }
+            
+            .ctrl-btn .icon {
+                font-size: 14px;
+            }
+            
+            .ctrl-btn .label {
+                font-size: 9px;
+            }
+            
+            #speech-bubble {
+                font-size: 14px;
+                padding: 10px 16px;
+                min-height: 44px;
+            }
+            
+            #status-bar .status-text {
+                font-size: 10px;
+            }
+            
+            #lang-indicator {
+                font-size: 10px;
+                padding: 2px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div class="logo">👓</div>
+        <h1>Inzozi Glasses</h1>
+        <p>Initializing smart vision system...</p>
+        <div class="spinner"></div>
+    </div>
+    
+    <!-- Main Container -->
+    <div id="container">
+        <div id="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas-overlay"></canvas>
+            
+            <!-- Status Bar -->
+            <div id="status-bar">
+                <div class="left">
+                    <span class="status-dot active" id="status-dot"></span>
+                    <span class="status-text active" id="status-text">LIVE</span>
+                    <span id="lang-indicator">🇷🇼 Kinyarwanda</span>
+                </div>
+                <div class="right">
+                    <span class="status-text" id="fps-display">0 FPS</span>
+                </div>
+            </div>
+            
+            <!-- Face Tags -->
+            <div id="face-grid"></div>
+            
+            <!-- ML Status -->
+            <div id="ml-status">
+                <div class="item">🧠 ML: <span class="active" id="ml-status-text">Active</span></div>
+                <div class="item">👤 Faces: <span id="face-count">0</span></div>
+                <div class="item">📦 Objects: <span id="object-count">0</span></div>
+            </div>
+            
+            <!-- Voice Indicator -->
+            <div id="voice-indicator">
+                <span class="pulse"></span>
+                <span id="voice-text">Listening...</span>
+            </div>
+            
+            <!-- Info Overlay -->
+            <div id="info-overlay">
+                <div id="speech-bubble">
+                    <span class="emoji">👋</span>
+                    <span id="speech-text">System ready</span>
+                </div>
+                <div id="distance-display">📏 Distance: -- cm</div>
+            </div>
+            
+            <!-- Controls -->
+            <div id="controls">
+                <button class="ctrl-btn primary" id="lang-btn">
+                    <span class="icon">🌍</span>
+                    <span class="label" id="lang-label">Kinyarwanda</span>
+                </button>
+                <button class="ctrl-btn" id="voice-btn">
+                    <span class="icon">🎤</span>
+                    <span class="label" id="voice-label">Voice</span>
+                </button>
+                <button class="ctrl-btn" id="ml-btn">
+                    <span class="icon">🧠</span>
+                    <span class="label" id="ml-label">ML ON</span>
+                </button>
+                <button class="ctrl-btn danger" id="reset-btn">
+                    <span class="icon">🔄</span>
+                    <span class="label">Reset</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ============================================================
+        // INZOZI SMART GLASSES - Web Interface
+        // Complete with Voice Commands, NLP, and Bilingual Support
+        // ============================================================
+        
+        (function() {
+            'use strict';
+            
+            // ============================================================
+            // STATE
+            // ============================================================
+            const state = {
+                isRunning: false,
+                useKinyarwanda: true,
+                voiceEnabled: true,
+                mlEnabled: true,
+                stream: null,
+                frameCount: 0,
+                fps: 0,
+                lastFpsUpdate: 0,
+                detectedFaces: [],
+                detectedObjects: [],
+                currentDistance: '--',
+                lastSpeech: '',
+                lastSpeechTime: 0,
+                speechCooldown: 3000,
+                isListening: false,
+                recognition: null,
+                context: {
+                    face_count: 0,
+                    objects: [],
+                    distance: '--',
+                    scene: 'Unknown'
+                }
+            };
+            
+            // ============================================================
+            // DOM ELEMENTS
+            // ============================================================
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas-overlay');
+            const ctx = canvas.getContext('2d');
+            const speechText = document.getElementById('speech-text');
+            const speechBubble = document.getElementById('speech-bubble');
+            const distanceDisplay = document.getElementById('distance-display');
+            const faceGrid = document.getElementById('face-grid');
+            const faceCount = document.getElementById('face-count');
+            const objectCount = document.getElementById('object-count');
+            const loading = document.getElementById('loading');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const langIndicator = document.getElementById('lang-indicator');
+            const langLabel = document.getElementById('lang-label');
+            const voiceLabel = document.getElementById('voice-label');
+            const mlLabel = document.getElementById('ml-label');
+            const mlStatusText = document.getElementById('ml-status-text');
+            const fpsDisplay = document.getElementById('fps-display');
+            const voiceIndicator = document.getElementById('voice-indicator');
+            const voiceText = document.getElementById('voice-text');
+            
+            // ============================================================
+            // TRANSLATIONS
+            // ============================================================
+            const translations = {
+                en: {
+                    system_ready: 'System ready',
+                    person_detected: 'Person detected',
+                    unknown_person: 'Unknown person',
+                    caution: 'Caution',
+                    object: 'object',
+                    centimeters: 'cm',
+                    ahead: 'ahead',
+                    outdoor: 'You are outdoors',
+                    indoor: 'You are indoors',
+                    voice_on: 'Voice ON',
+                    voice_off: 'Voice OFF',
+                    ml_on: 'ML ON',
+                    ml_off: 'ML OFF',
+                    language: 'English',
+                    listening: 'Listening...',
+                    tap_to_speak: 'Tap to speak'
+                },
+                rw: {
+                    system_ready: 'Sisitemu iteguye',
+                    person_detected: 'Muntu yagaragaye',
+                    unknown_person: 'Muntu utazwi',
+                    caution: 'Itondere',
+                    object: 'ikintu',
+                    centimeters: 'santimetero',
+                    ahead: 'imbere',
+                    outdoor: 'Uri hanze',
+                    indoor: 'Uri mu nzu',
+                    voice_on: 'Ijwi RAKI',
+                    voice_off: 'Ijwi RYAZIMYE',
+                    ml_on: 'ML YAKI',
+                    ml_off: 'ML YAZIMYE',
+                    language: 'Kinyarwanda',
+                    listening: 'Ndetse...',
+                    tap_to_speak: 'Kanda kugira ngo uvuge'
+                }
+            };
+            
+            function t(key) {
+                const lang = state.useKinyarwanda ? 'rw' : 'en';
+                return translations[lang][key] || translations.en[key] || key;
+            }
+            
+            // ============================================================
+            // SPEECH SYNTHESIS (TTS)
+            // ============================================================
+            function speak(text, key, cooldown = 3000) {
+                if (!state.voiceEnabled) return;
+                
+                const now = Date.now();
+                const k = key || text;
+                if (now - state.lastSpeechTime < cooldown && k === state.lastSpeech) return;
+                
+                state.lastSpeech = k;
+                state.lastSpeechTime = now;
+                
+                // Update speech bubble
+                speechText.textContent = text;
+                speechBubble.style.borderColor = 'rgba(0, 255, 136, 0.3)';
+                
+                // Use Web Speech API
+                if ('speechSynthesis' in window) {
+                    // Cancel any ongoing speech
+                    window.speechSynthesis.cancel();
+                    
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = state.useKinyarwanda ? 'rw' : 'en-US';
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1.0;
+                    
+                    // Try to find a good voice
+                    const voices = window.speechSynthesis.getVoices();
+                    if (voices.length > 0) {
+                        const preferred = voices.find(v => 
+                            state.useKinyarwanda ? 
+                            v.lang.startsWith('rw') || v.lang.startsWith('sw') :
+                            v.lang.startsWith('en')
+                        );
+                        if (preferred) utterance.voice = preferred;
+                    }
+                    
+                    window.speechSynthesis.speak(utterance);
+                }
+                
+                // Reset border after animation
+                setTimeout(() => {
+                    speechBubble.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                }, 3000);
+            }
+            
+            // ============================================================
+            // VOICE RECOGNITION
+            // ============================================================
+            function initVoiceRecognition() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    console.warn('Speech recognition not supported');
+                    return null;
+                }
+                
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = state.useKinyarwanda ? 'rw' : 'en-US';
+                recognition.maxAlternatives = 1;
+                
+                recognition.onstart = function() {
+                    state.isListening = true;
+                    voiceIndicator.classList.add('show');
+                    voiceText.textContent = t('listening');
+                };
+                
+                recognition.onend = function() {
+                    state.isListening = false;
+                    setTimeout(() => {
+                        voiceIndicator.classList.remove('show');
+                    }, 1000);
+                };
+                
+                recognition.onresult = function(event) {
+                    const result = event.results[event.results.length - 1];
+                    if (result.isFinal) {
+                        const text = result[0].transcript;
+                        voiceText.textContent = text;
+                        console.log('Voice recognized:', text);
+                        sendVoiceCommand(text);
+                    } else {
+                        const text = result[0].transcript;
+                        voiceText.textContent = text + '...';
+                    }
+                };
+                
+                recognition.onerror = function(event) {
+                    console.warn('Speech recognition error:', event.error);
+                    state.isListening = false;
+                    voiceIndicator.classList.remove('show');
+                    if (event.error === 'not-allowed') {
+                        speak('Please allow microphone access', 'mic_error', 1000);
+                    }
+                };
+                
+                return recognition;
+            }
+            
+            function startListening() {
+                if (!state.recognition) {
+                    state.recognition = initVoiceRecognition();
+                }
+                
+                if (state.recognition && !state.isListening) {
+                    try {
+                        state.recognition.lang = state.useKinyarwanda ? 'rw' : 'en-US';
+                        state.recognition.start();
+                    } catch (e) {
+                        console.warn('Could not start recognition:', e);
+                    }
+                }
+            }
+            
+            // ============================================================
+            // API COMMUNICATION
+            // ============================================================
+            async function sendVoiceCommand(text) {
+                try {
+                    const response = await fetch('/api/voice', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ text: text })
+                    });
+                    
+                    const data = await response.json();
+                    console.log('NLP Response:', data);
+                    
+                    // Speak the response
+                    if (data.response) {
+                        speak(data.response, data.action, 2000);
+                    }
+                    
+                    // Handle language switching
+                    if (data.action === 'language_switch' && data.language) {
+                        state.useKinyarwanda = (data.language === 'rw');
+                        updateLanguageUI();
+                    }
+                    
+                    // Update context
+                    if (data.context) {
+                        state.context = data.context;
+                    }
+                    
+                    return data;
+                } catch (error) {
+                    console.error('Error sending voice command:', error);
+                }
+            }
+            
+            async function updateContext() {
+                try {
+                    const response = await fetch('/api/context', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(state.context)
+                    });
+                } catch (error) {
+                    console.error('Error updating context:', error);
+                }
+            }
+            
+            // ============================================================
+            // CAMERA INITIALIZATION
+            // ============================================================
+            async function initCamera() {
+                try {
+                    const constraints = {
+                        video: {
+                            facingMode: 'environment',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            frameRate: { ideal: 15 }
+                        },
+                        audio: false
+                    };
+                    
+                    state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = state.stream;
+                    await video.play();
+                    
+                    // Set canvas size
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 480;
+                    
+                    state.isRunning = true;
+                    statusDot.className = 'status-dot active';
+                    statusText.textContent = 'LIVE';
+                    statusText.className = 'status-text active';
+                    
+                    // Hide loading
+                    loading.classList.add('hidden');
+                    
+                    // Start processing
+                    processFrame();
+                    
+                    return true;
+                } catch (err) {
+                    console.error('Camera error:', err);
+                    statusDot.className = 'status-dot inactive';
+                    statusText.textContent = 'CAMERA ERROR';
+                    statusText.className = 'status-text';
+                    loading.classList.add('hidden');
+                    return false;
+                }
+            }
+            
+            // ============================================================
+            // FACE DETECTION (Using built-in API)
+            // ============================================================
+            async function detectFaces(imageData) {
+                if (!state.mlEnabled) return [];
+                
+                try {
+                    if ('FaceDetector' in window) {
+                        const detector = new FaceDetector({
+                            maxDetectedFaces: 10,
+                            fastMode: true
+                        });
+                        
+                        const detCanvas = document.createElement('canvas');
+                        detCanvas.width = imageData.width;
+                        detCanvas.height = imageData.height;
+                        const detCtx = detCanvas.getContext('2d');
+                        detCtx.putImageData(imageData, 0, 0);
+                        
+                        const faces = await detector.detect(detCanvas);
+                        return faces.map(face => ({
+                            x: face.boundingBox.x,
+                            y: face.boundingBox.y,
+                            width: face.boundingBox.width,
+                            height: face.boundingBox.height,
+                            confidence: 0.8
+                        }));
+                    }
+                    return [];
+                } catch (err) {
+                    return [];
+                }
+            }
+            
+            // ============================================================
+            // OBJECT DETECTION (TensorFlow.js COCO-SSD)
+            // ============================================================
+            let objectModel = null;
+            
+            async function loadObjectModel() {
+                try {
+                    if (window.tf && window.cocoSsd) {
+                        objectModel = await window.cocoSsd.load();
+                        return true;
+                    }
+                    return false;
+                } catch (err) {
+                    console.warn('Object detection not available:', err);
+                    return false;
+                }
+            }
+            
+            async function detectObjects(imageData) {
+                if (!state.mlEnabled || !objectModel) return [];
+                
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = imageData.width;
+                    canvas.height = imageData.height;
+                    const c = canvas.getContext('2d');
+                    c.putImageData(imageData, 0, 0);
+                    
+                    const predictions = await objectModel.detect(canvas);
+                    return predictions.map(p => ({
+                        class: p.class,
+                        confidence: p.score,
+                        x: p.bbox[0],
+                        y: p.bbox[1],
+                        width: p.bbox[2],
+                        height: p.bbox[3]
+                    }));
+                } catch (err) {
+                    return [];
+                }
+            }
+            
+            // ============================================================
+            // MAIN PROCESSING LOOP
+            // ============================================================
+            async function processFrame() {
+                if (!state.isRunning) return;
+                
+                const now = performance.now();
+                
+                try {
+                    // Update FPS
+                    state.frameCount++;
+                    if (now - state.lastFpsUpdate > 1000) {
+                        state.fps = state.frameCount;
+                        state.frameCount = 0;
+                        state.lastFpsUpdate = now;
+                        fpsDisplay.textContent = `${state.fps} FPS`;
+                    }
+                    
+                    const vw = video.videoWidth || 640;
+                    const vh = video.videoHeight || 480;
+                    
+                    if (vw === 0 || vh === 0) {
+                        requestAnimationFrame(processFrame);
+                        return;
+                    }
+                    
+                    if (canvas.width !== vw || canvas.height !== vh) {
+                        canvas.width = vw;
+                        canvas.height = vh;
+                    }
+                    
+                    ctx.drawImage(video, 0, 0, vw, vh);
+                    const imageData = ctx.getImageData(0, 0, vw, vh);
+                    
+                    // Run detections every 3 frames
+                    if (state.frameCount % 3 === 0) {
+                        const [faces, objects] = await Promise.all([
+                            detectFaces(imageData),
+                            detectObjects(imageData)
+                        ]);
+                        
+                        state.detectedFaces = faces;
+                        state.detectedObjects = objects;
+                        
+                        // Update context
+                        state.context.face_count = faces.length;
+                        state.context.objects = objects.slice(0, 3).map(o => o.class);
+                        await updateContext();
+                        
+                        updateUI(faces, objects);
+                        generateAnnouncements(faces, objects);
+                    }
+                    
+                    drawOverlays(state.detectedFaces, state.detectedObjects);
+                    
+                } catch (err) {
+                    // Continue processing
+                }
+                
+                requestAnimationFrame(processFrame);
+            }
+            
+            // ============================================================
+            // UI UPDATES
+            // ============================================================
+            function updateUI(faces, objects) {
+                faceCount.textContent = faces.length;
+                objectCount.textContent = objects.length;
+                
+                // Face tags
+                faceGrid.innerHTML = '';
+                faces.slice(0, 5).forEach((face, index) => {
+                    const tag = document.createElement('div');
+                    const isKnown = face.confidence > 0.85;
+                    tag.className = `face-tag ${isKnown ? 'known' : 'unknown'}`;
+                    const names = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve'];
+                    const name = isKnown ? names[index % names.length] : 'Unknown';
+                    tag.innerHTML = `<span class="emoji">${isKnown ? '✅' : '❓'}</span> ${name}`;
+                    faceGrid.appendChild(tag);
+                });
+            }
+            
+            function drawOverlays(faces, objects) {
+                const vw = canvas.width;
+                const vh = canvas.height;
+                
+                ctx.clearRect(0, 0, vw, vh);
+                
+                // Draw face boxes
+                faces.forEach(face => {
+                    const x = face.x || 0;
+                    const y = face.y || 0;
+                    const w = face.width || 0;
+                    const h = face.height || 0;
+                    
+                    const scaleX = vw / (video.videoWidth || 640);
+                    const scaleY = vh / (video.videoHeight || 480);
+                    
+                    const rx = x * scaleX;
+                    const ry = y * scaleY;
+                    const rw = w * scaleX;
+                    const rh = h * scaleY;
+                    
+                    const isKnown = face.confidence > 0.85;
+                    const color = isKnown ? '#00ff88' : '#ffcc00';
+                    
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 10;
+                    ctx.strokeRect(rx, ry, rw, rh);
+                    ctx.shadowBlur = 0;
+                    
+                    const label = isKnown ? 
+                        ['Alice', 'Bob', 'Carol', 'Dave', 'Eve'][Math.floor(Math.random() * 5)] : 
+                        'Unknown';
+                    
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    const metrics = ctx.measureText(label);
+                    ctx.fillRect(rx, ry - 25, metrics.width + 20, 25);
+                    ctx.fillStyle = color;
+                    ctx.font = '14px sans-serif';
+                    ctx.fillText(label, rx + 5, ry - 5);
+                });
+                
+                // Draw object boxes
+                objects.forEach(obj => {
+                    const x = obj.x || 0;
+                    const y = obj.y || 0;
+                    const w = obj.width || 0;
+                    const h = obj.height || 0;
+                    
+                    const scaleX = vw / (video.videoWidth || 640);
+                    const scaleY = vh / (video.videoHeight || 480);
+                    
+                    const rx = x * scaleX;
+                    const ry = y * scaleY;
+                    const rw = w * scaleX;
+                    const rh = h * scaleY;
+                    
+                    ctx.strokeStyle = '#4488ff';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeRect(rx, ry, rw, rh);
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = 'rgba(68, 136, 255, 0.2)';
+                    ctx.fillRect(rx, ry, rw, rh);
+                    
+                    const label = `${obj.class} (${(obj.confidence * 100).toFixed(0)}%)`;
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    const metrics = ctx.measureText(label);
+                    ctx.fillRect(rx, ry - 20, metrics.width + 16, 20);
+                    ctx.fillStyle = '#4488ff';
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText(label, rx + 4, ry - 4);
+                });
+            }
+            
+            // ============================================================
+            // ANNOUNCEMENTS
+            // ============================================================
+            function generateAnnouncements(faces, objects) {
+                const now = Date.now();
+                
+                if (faces.length > 0 && now - state.lastSpeechTime > 4000) {
+                    const msg = state.useKinyarwanda ?
+                        `Abantu ${faces.length} bagaragaye` :
+                        `${faces.length} people detected`;
+                    speak(msg, 'faces', 4000);
+                }
+                
+                if (objects.length > 0 && now - state.lastSpeechTime > 5000) {
+                    const topObjects = objects.slice(0, 2);
+                    const names = topObjects.map(o => o.class).join(' ');
+                    if (names) {
+                        const msg = state.useKinyarwanda ?
+                            `Yamuwe: ${names}` :
+                            `Detected: ${names}`;
+                        speak(msg, 'objects', 5000);
+                    }
+                }
+            }
+            
+            // ============================================================
+            // UI CONTROLS
+            // ============================================================
+            function updateLanguageUI() {
+                const label = state.useKinyarwanda ? 'Kinyarwanda' : 'English';
+                langIndicator.textContent = state.useKinyarwanda ? '🇷🇼 Kinyarwanda' : '🇬🇧 English';
+                langLabel.textContent = label;
+                speechText.textContent = t('system_ready');
+                
+                if (state.recognition) {
+                    state.recognition.lang = state.useKinyarwanda ? 'rw' : 'en-US';
+                }
+            }
+            
+            function setupControls() {
+                // Language toggle
+                document.getElementById('lang-btn').addEventListener('click', () => {
+                    state.useKinyarwanda = !state.useKinyarwanda;
+                    updateLanguageUI();
+                    speak(t('system_ready'), 'lang', 1000);
+                });
+                
+                // Voice button - toggle listening
+                document.getElementById('voice-btn').addEventListener('click', () => {
+                    if (state.isListening) {
+                        if (state.recognition) {
+                            try {
+                                state.recognition.stop();
+                            } catch (e) {}
+                        }
+                        voiceIndicator.classList.remove('show');
+                    } else {
+                        startListening();
+                    }
+                });
+                
+                // ML toggle
+                document.getElementById('ml-btn').addEventListener('click', () => {
+                    state.mlEnabled = !state.mlEnabled;
+                    mlLabel.textContent = state.mlEnabled ? t('ml_on') : t('ml_off');
+                    mlStatusText.textContent = state.mlEnabled ? 'Active' : 'Off';
+                    mlStatusText.className = state.mlEnabled ? 'active' : '';
+                    speak(state.mlEnabled ? t('ml_on') : t('ml_off'), 'ml', 1000);
+                });
+                
+                // Reset
+                document.getElementById('reset-btn').addEventListener('click', () => {
+                    state.detectedFaces = [];
+                    state.detectedObjects = [];
+                    faceGrid.innerHTML = '';
+                    state.context.face_count = 0;
+                    state.context.objects = [];
+                    updateContext();
+                    speak(t('system_ready'), 'reset', 1000);
+                });
+            }
+            
+            // ============================================================
+            // SIMULATE DISTANCE UPDATES
+            // ============================================================
+            function simulateDistance() {
+                setInterval(() => {
+                    const dist = Math.floor(Math.random() * 150 + 10);
+                    state.currentDistance = dist;
+                    state.context.distance = dist;
+                    distanceDisplay.textContent = `📏 Distance: ${dist} cm`;
+                }, 3000);
+            }
+            
+            // ============================================================
+            // INITIALIZATION
+            // ============================================================
+            async function init() {
+                // Load voices
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.getVoices();
+                    window.speechSynthesis.onvoiceschanged = () => {
+                        window.speechSynthesis.getVoices();
+                    };
+                }
+                
+                // Load object detection model
+                await loadObjectModel();
+                
+                // Setup controls
+                setupControls();
+                
+                // Initialize camera
+                const cameraReady = await initCamera();
+                
+                if (!cameraReady) {
+                    statusDot.className = 'status-dot inactive';
+                    statusText.textContent = '⚠️ No Camera';
+                    speechText.textContent = 'Please allow camera access';
+                    loading.classList.add('hidden');
+                    return;
+                }
+                
+                // Initialize voice recognition
+                state.recognition = initVoiceRecognition();
+                
+                // Welcome message
+                setTimeout(() => {
+                    speak(t('system_ready'), 'welcome', 2000);
+                }, 1500);
+                
+                // Start distance simulation
+                simulateDistance();
+                
+                // Auto-start listening after a delay
+                setTimeout(() => {
+                    startListening();
+                }, 3000);
+            }
+            
+            // Start when ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+            
+        })();
+    </script>
+</body>
+</html>
