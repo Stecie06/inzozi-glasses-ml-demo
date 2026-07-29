@@ -19,6 +19,9 @@ https://drive.google.com/file/d/1wEqMSUo27A3i6y9A18dbjFsulxuEa64-/view?usp=drive
 ### Final Product Demo 
 [https://drive.google.com/file/d/1mpUiJL8WEMc0P5mWOZPh33JizW_letGI/view?usp=](https://drive.google.com/file/d/1mpUiJL8WEMc0P5mWOZPh33JizW_letGI/view?usp=drive_link)
 
+### Application Package 
+RUN the app by clicking "InzoziGlasses.exe" file
+
 Open `index.html` in any modern browser to see the complete simulation.
 
 ### How to Use
