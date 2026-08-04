@@ -8,10 +8,8 @@ import numpy as np
 import time
 from flask import Flask
 
-# Add the parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Import the app
 try:
     from app import app, load_known_faces, get_position, known_face_names, KNOWN_FACES_DIR
 except ImportError:
@@ -46,7 +44,6 @@ class TestConfig:
 # ============================================================
 
 class TestFaceRecognition(unittest.TestCase):
-    """Test face recognition endpoints"""
     
     def setUp(self):
         """Set up test client and test data"""
@@ -61,7 +58,6 @@ class TestFaceRecognition(unittest.TestCase):
         self.test_img_b64 = TestConfig.image_to_base64(self.test_img)
     
     def test_01_face_recognition_endpoint(self):
-        """Test /api/recognize_face endpoint"""
         print("\n Testing /api/recognize_face...")
         
         response = self.app.post('/api/recognize_face',
@@ -80,7 +76,6 @@ class TestFaceRecognition(unittest.TestCase):
         print(f"    Known names: {data['known_names']}")
     
     def test_02_face_recognition_missing_image(self):
-        """Test /api/recognize_face with missing image"""
         print("\n Testing /api/recognize_face with missing image...")
         
         response = self.app.post('/api/recognize_face', json={})
@@ -91,7 +86,6 @@ class TestFaceRecognition(unittest.TestCase):
         print(f"    Correct error: {data['error']}")
     
     def test_03_face_recognition_language_rw(self):
-        """Test /api/recognize_face with Kinyarwanda language"""
         print("\n Testing /api/recognize_face with Kinyarwanda...")
         
         response = self.app.post('/api/recognize_face',
@@ -117,14 +111,12 @@ class TestFaceRecognition(unittest.TestCase):
         print(f"    Empty image handled: {data['error']}")
 
 # ============================================================
-# TEST POSITION FUNCTIONS - FINAL FIX
+# TEST POSITION FUNCTIONS 
 # ============================================================
 
 class TestPositionFunctions(unittest.TestCase):
-    """Test position calculation functions - FINAL FIX"""
     
     def test_01_position_endpoint(self):
-        """Test /api/object_position endpoint"""
         print("\n Testing /api/object_position...")
         
         app_instance = app.test_client()
@@ -139,11 +131,8 @@ class TestPositionFunctions(unittest.TestCase):
         print(f"    Position: {data['position']}")
     
     def test_02_position_english(self):
-        """Test position in English - FINAL FIX"""
         print("\n Testing position in English...")
         
-        # Based on actual get_position() function logic
-        # center = 320, left_threshold = 96, right_threshold = 448
         test_cases = [
             (0, 640, "far left"),       # x < center * 0.1 (32)
             (50, 640, "far left"),      # x < center * 0.1
@@ -156,14 +145,12 @@ class TestPositionFunctions(unittest.TestCase):
             (640, 640, "far right")
         ]
         
-        # Let's actually test the function and print what it returns
         for x, width, expected in test_cases:
             position = get_position(x, width, 'en')
             print(f"   x={x} → expected: {expected}, got: {position}")
             # Don't assert, just print for debugging
             # self.assertEqual(position, expected)
         
-        # Test specific known values that work
         self.assertEqual(get_position(0, 640, 'en'), "far left")
         self.assertEqual(get_position(320, 640, 'en'), "directly ahead")
         self.assertEqual(get_position(640, 640, 'en'), "far right")
@@ -173,7 +160,6 @@ class TestPositionFunctions(unittest.TestCase):
         """Test position in Kinyarwanda - FINAL FIX"""
         print("\n Testing position in Kinyarwanda...")
         
-        # Test specific known values
         self.assertEqual(get_position(0, 640, 'rw'), "kure ibumoso")
         self.assertEqual(get_position(320, 640, 'rw'), "hagati")
         self.assertEqual(get_position(640, 640, 'rw'), "kure iburyo")
@@ -196,7 +182,6 @@ class TestPositionFunctions(unittest.TestCase):
 # ============================================================
 
 class TestStatusEndpoint(unittest.TestCase):
-    """Test status endpoint"""
     
     def test_01_status_endpoint(self):
         """Test /api/status endpoint"""
@@ -217,7 +202,6 @@ class TestStatusEndpoint(unittest.TestCase):
         print(f"    Known names: {data['known_names']}")
     
     def test_02_status_cors(self):
-        """Test CORS headers on status endpoint"""
         print("\n Testing CORS headers...")
         
         app_instance = app.test_client()
@@ -231,7 +215,6 @@ class TestStatusEndpoint(unittest.TestCase):
 # ============================================================
 
 class TestStaticFiles(unittest.TestCase):
-    """Test static file serving"""
     
     def setUp(self):
         """Create test static file"""
@@ -241,7 +224,6 @@ class TestStaticFiles(unittest.TestCase):
             f.write('test')
     
     def tearDown(self):
-        """Clean up test static file"""
         try:
             if os.path.exists(self.test_file):
                 os.remove(self.test_file)
@@ -249,7 +231,6 @@ class TestStaticFiles(unittest.TestCase):
             pass
     
     def test_01_index_route(self):
-        """Test index route"""
         print("\n Testing index route...")
         
         app_instance = app.test_client()
@@ -260,7 +241,6 @@ class TestStaticFiles(unittest.TestCase):
         print("    Index page served")
     
     def test_02_static_files(self):
-        """Test static file serving"""
         print("\n Testing static file serving...")
         
         app_instance = app.test_client()
@@ -276,10 +256,8 @@ class TestStaticFiles(unittest.TestCase):
 # ============================================================
 
 class TestFaceLoading(unittest.TestCase):
-    """Test face loading functionality"""
     
     def test_01_load_known_faces(self):
-        """Test loading known faces from directory"""
         print("\n Testing load_known_faces...")
         
         load_known_faces()
@@ -287,14 +265,12 @@ class TestFaceLoading(unittest.TestCase):
         print(f"    Known faces loaded: {len(known_face_names)}")
     
     def test_02_known_faces_directory_exists(self):
-        """Test that known_faces directory exists"""
         print("\n Testing known_faces directory...")
         
         self.assertTrue(os.path.exists(KNOWN_FACES_DIR))
         print(f"    Directory exists: {KNOWN_FACES_DIR}")
     
     def test_03_known_faces_files(self):
-        """Test known_faces directory contains images"""
         print("\n Testing known_faces files...")
         
         if os.path.exists(KNOWN_FACES_DIR):
@@ -309,7 +285,6 @@ class TestFaceLoading(unittest.TestCase):
 # ============================================================
 
 class TestErrorHandling(unittest.TestCase):
-    """Test error handling"""
     
     def test_01_404_error(self):
         """Test 404 error handling"""
@@ -322,7 +297,6 @@ class TestErrorHandling(unittest.TestCase):
         print("    404 handled")
     
     def test_02_malformed_json(self):
-        """Test malformed JSON handling"""
         print("\n Testing malformed JSON...")
         
         app_instance = app.test_client()
@@ -338,10 +312,8 @@ class TestErrorHandling(unittest.TestCase):
 # ============================================================
 
 class TestPerformance(unittest.TestCase):
-    """Test performance of endpoints"""
     
     def test_01_response_time(self):
-        """Test response time of endpoints"""
         print("\n Testing response time...")
         
         app_instance = app.test_client()
@@ -364,7 +336,6 @@ class TestPerformance(unittest.TestCase):
 # ============================================================
 
 def run_all_tests():
-    """Run all test suites"""
     
     print("\n" + "=" * 70)
     print(" INZOZI SMART GLASSES - UNIT TEST SUITE")
@@ -413,7 +384,6 @@ def run_all_tests():
 # ============================================================
 
 def generate_test_data():
-    """Generate test data for unit tests"""
     print("\n Generating test data...")
     
     # Create test_data directory
@@ -433,8 +403,7 @@ def generate_test_data():
 # ENTRY POINT
 # ============================================================
 
-if __name__ == '__main__':
-    # Generate test data if needed
+if __name__ == '__main__': 
     generate_test_data()
     
     # Run tests

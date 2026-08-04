@@ -209,12 +209,12 @@
             <div id="face-tags"></div>
             
             <div id="ml-status">
-                <div>👤 <span class="val" id="face-count">0</span></div>
-                <div>📦 <span class="val" id="object-count">0</span></div>
+                <div> <span class="val" id="face-count">0</span></div>
+                <div> <span class="val" id="object-count">0</span></div>
             </div>
             
             <div id="speech-bubble">
-                <span class="emoji">👋</span>
+                <span class="emoji"></span>
                 <span id="speech-text">Sisitemu iteguye...</span>
             </div>
         </div>
@@ -334,7 +334,7 @@
                 };
                 
                 recognition.onend = function() {
-                    console.log('🔄 Recognition ended, restarting...');
+                    console.log(' Recognition ended, restarting...');
                     if (state.isRunning) {
                         setTimeout(() => {
                             try { 
@@ -378,7 +378,7 @@
             // ============================================================
             function handleVoiceInput(text) {
                 const lower = text.toLowerCase().trim();
-                console.log('📝 Processing:', lower);
+                console.log(' Processing:', lower);
                 
                 // ============================================================
                 // CHECK FOR ENGLISH - ONLY WAY TO SWITCH FROM KINYARWANDA
@@ -493,7 +493,7 @@
                     if (state.recognition) {
                         try { 
                             state.recognition.start(); 
-                            console.log('✅ Voice recognition started');
+                            console.log(' Voice recognition started');
                         } catch(e) {
                             console.warn('Could not start recognition:', e);
                         }
@@ -560,7 +560,7 @@
                 try {
                     if (window.tf && window.cocoSsd) {
                         objectModel = await window.cocoSsd.load();
-                        console.log('✅ Object detection loaded');
+                        console.log(' Object detection loaded');
                         return true;
                     }
                     return false;
@@ -743,7 +743,7 @@
                     let label = face.name;
                     if (face.position) label += ` ${face.position}`;
                     if (face.clothing) label += ` (${face.clothing})`;
-                    tag.innerHTML = `${face.is_known ? '✅' : '❓'} ${label}`;
+                    tag.innerHTML = `${face.is_known ? '' : ''} ${label}`;
                     faceTags.appendChild(tag);
                 });
             }

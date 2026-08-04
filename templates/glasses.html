@@ -476,9 +476,9 @@
             
             <!-- ML Status -->
             <div id="ml-status">
-                <div class="item">🧠 ML: <span class="active" id="ml-status-text">Active</span></div>
-                <div class="item">👤 Faces: <span id="face-count">0</span></div>
-                <div class="item">📦 Objects: <span id="object-count">0</span></div>
+                <div class="item"> ML: <span class="active" id="ml-status-text">Active</span></div>
+                <div class="item"> Faces: <span id="face-count">0</span></div>
+                <div class="item"> Objects: <span id="object-count">0</span></div>
             </div>
             
             <!-- Voice Indicator -->
@@ -490,28 +490,28 @@
             <!-- Info Overlay -->
             <div id="info-overlay">
                 <div id="speech-bubble">
-                    <span class="emoji">👋</span>
+                    <span class="emoji"></span>
                     <span id="speech-text">System ready</span>
                 </div>
-                <div id="distance-display">📏 Distance: -- cm</div>
+                <div id="distance-display"> Distance: -- cm</div>
             </div>
             
             <!-- Controls -->
             <div id="controls">
                 <button class="ctrl-btn primary" id="lang-btn">
-                    <span class="icon">🌍</span>
+                    <span class="icon"></span>
                     <span class="label" id="lang-label">Kinyarwanda</span>
                 </button>
                 <button class="ctrl-btn" id="voice-btn">
-                    <span class="icon">🎤</span>
+                    <span class="icon"></span>
                     <span class="label" id="voice-label">Voice</span>
                 </button>
                 <button class="ctrl-btn" id="ml-btn">
-                    <span class="icon">🧠</span>
+                    <span class="icon"></span>
                     <span class="label" id="ml-label">ML ON</span>
                 </button>
                 <button class="ctrl-btn danger" id="reset-btn">
-                    <span class="icon">🔄</span>
+                    <span class="icon"></span>
                     <span class="label">Reset</span>
                 </button>
             </div>
@@ -992,7 +992,7 @@
                     tag.className = `face-tag ${isKnown ? 'known' : 'unknown'}`;
                     const names = ['Alice', 'Bob', 'Carol', 'Dave', 'Eve'];
                     const name = isKnown ? names[index % names.length] : 'Unknown';
-                    tag.innerHTML = `<span class="emoji">${isKnown ? '✅' : '❓'}</span> ${name}`;
+                    tag.innerHTML = `<span class="emoji">${isKnown ? '' : ''}</span> ${name}`;
                     faceGrid.appendChild(tag);
                 });
             }

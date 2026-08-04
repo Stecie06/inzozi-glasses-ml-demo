@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""
-INZOZI GLASSES - COMPLETE VERSION WITH ALL FEATURES
-1. Face Recognition (Known + Unknown Faces) - BILINGUAL SUPPORT
-2. Bilingual TTS (English + Kinyarwanda - PowerShell SAPI)
-3. Object Detection (YOLOv8)
-4. Emotion Detection (DeepFace)
-5. Scene Recognition
-6. Arduino Distance Alerts
-"""
 
-# ============================================================
-# CRITICAL: Import torch FIRST for safe globals
-# ============================================================
 import torch
 import torch.nn as nn
 
@@ -80,7 +68,7 @@ def get_project_root():
 PROJECT_ROOT = get_project_root()
 
 # ============================================================
-# FIX 2: Comprehensive safe globals for PyTorch 2.6+
+# Comprehensive safe globals for PyTorch 2.6+
 # ============================================================
 def register_safe_globals():
     try:
@@ -107,10 +95,10 @@ def register_safe_globals():
             nn.Linear,
             nn.Dropout,
         ])
-        print("✅ Safe globals registered for YOLO")
+        print(" Safe globals registered for YOLO")
         return True
     except Exception as e:
-        print(f"⚠️ Could not register safe globals: {e}")
+        print(f" Could not register safe globals: {e}")
         return False
 
 register_safe_globals()
@@ -153,7 +141,7 @@ class BilingualTTSWrapper:
     
     def __init__(self):
         self.is_loaded = True
-        print("✅ Bilingual TTS initialized (PowerShell SAPI)")
+        print(" Bilingual TTS initialized (PowerShell SAPI)")
     
     def speak(self, text):
         """Speak text using Windows PowerShell SAPI"""
@@ -161,13 +149,13 @@ class BilingualTTSWrapper:
             escaped = text.replace('"', '`"')
             cmd = f'powershell -Command "Add-Type -AssemblyName System.Speech; $s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Speak(\\\"{escaped}\\\")"'
             subprocess.run(cmd, shell=True, capture_output=True, timeout=5)
-            print(f"🔊 TTS: {text}")
+            print(f" TTS: {text}")
             return True
         except subprocess.TimeoutExpired:
-            print(f"⚠️ TTS timeout for: {text}")
+            print(f" TTS timeout for: {text}")
             return False
         except Exception as e:
-            print(f"⚠️ TTS error: {e}")
+            print(f" TTS error: {e}")
             return False
 
     def load_model(self):
@@ -214,7 +202,7 @@ class UnknownFaceDetector:
             
             voice_engine.speak(message, "unknown_face", cooldown=10, force=True)
             self.last_unknown_alert = current_time
-            print(f"🔍 {message}")
+            print(f" {message}")
             return True
         return False
     
@@ -448,9 +436,9 @@ class VoiceEngine:
         self.bilingual_tts = None
         try:
             self.bilingual_tts = BilingualTTSWrapper()
-            print("✅ Bilingual TTS initialized")
+            print(" Bilingual TTS initialized")
         except Exception as e:
-            print(f"⚠️ Bilingual TTS error: {e}")
+            print(f" Bilingual TTS error: {e}")
 
         self.engine_available = pyttsx3 is not None
         if not self.engine_available:
@@ -914,11 +902,11 @@ class SmartGlassesWithML(SmartGlassesComplete):
         self.ml_frame_counter = 0
 
         print("\n ML MODULE STATUS:")
-        print(f"   Object Detection: {'✅' if self.object_detector and self.object_detector.is_available else '❌'}")
-        print(f"   Emotion Detection: {'✅' if self.emotion_detector and self.emotion_detector.is_available else '❌'}")
-        print(f"   Scene Recognition: {'✅' if self.scene_recognizer and self.scene_recognizer.is_available else '❌'}")
-        print(f"   Unknown Faces: ✅")
-        print(f"   Bilingual TTS: {'✅' if use_kinyarwanda else 'English'}")
+        print(f"   Object Detection: {'' if self.object_detector and self.object_detector.is_available else '❌'}")
+        print(f"   Emotion Detection: {'' if self.emotion_detector and self.emotion_detector.is_available else '❌'}")
+        print(f"   Scene Recognition: {'' if self.scene_recognizer and self.scene_recognizer.is_available else '❌'}")
+        print(f"   Unknown Faces: ")
+        print(f"   Bilingual TTS: {'' if use_kinyarwanda else 'English'}")
         print("=" * 70)
 
         if use_kinyarwanda:
@@ -1195,7 +1183,7 @@ if __name__ == "__main__":
     print("Phone Camera + Arduino + Face Recognition + ML")
     print("=" * 70)
 
-    print("\n🎤 Bilingual TTS: Using PowerShell SAPI")
+    print("\n Bilingual TTS: Using PowerShell SAPI")
 
     print("\n Checking ML dependencies...")
     try:
