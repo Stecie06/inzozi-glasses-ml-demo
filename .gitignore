@@ -41,3 +41,6 @@ smartglasses_env/
 *.dll
 *.pyd
 *.mp4
+*.mp4
+*.avi
+*.mov
