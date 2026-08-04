@@ -6,12 +6,12 @@
 Inzozi Glasses (meaning "Dreams" in Kinyarwanda) is a wearable smart system that helps visually impaired users navigate indoors, recognize faces, detect emotions, and receive voice guidance in both Kinyarwanda and English.
 
 ### Features
-- 🎯 **Object Detection (YOLOv8n)** — Detects everyday objects in view
-- 👤 **Face Recognition** (`face_recognition`/dlib) — Recognizes registered people from `known_faces/`
-- 😊 **Emotion Detection** (DeepFace) — Detects emotions on recognized faces
-- 🏠 **Scene Recognition** — Classifies Indoor / Outdoor
-- 📏 **Distance Alerts** — Optional Arduino ultrasonic sensor + vibration motor for obstacle warnings
-- 🗣️ **Bilingual Voice** — Kinyarwanda + English text-to-speech and (in the standalone app) live language switching
+-  **Object Detection (YOLOv8n)** — Detects everyday objects in view
+-  **Face Recognition** (`face_recognition`/dlib) — Recognizes registered people from `known_faces/`
+-  **Emotion Detection** (DeepFace) — Detects emotions on recognized faces
+-  **Scene Recognition** — Classifies Indoor / Outdoor
+-  **Distance Alerts** — Optional Arduino ultrasonic sensor + vibration motor for obstacle warnings
+-  **Bilingual Voice** — Kinyarwanda + English text-to-speech and (in the standalone app) live language switching
 
 ### Live Demo
 https://drive.google.com/file/d/1wEqMSUo27A3i6y9A18dbjFsulxuEa64-/view?usp=drive_link
@@ -21,7 +21,7 @@ https://drive.google.com/file/d/1wEqMSUo27A3i6y9A18dbjFsulxuEa64-/view?usp=drive
 
 ---
 
-## ⚠️ Read this before "How to Use" — there are two runnable systems here, not one
+##  Read this before "How to Use" — there are two runnable systems here, not one
 
 This repo actually contains **two separate ways to run Inzozi Glasses**, plus a Windows `.exe` build of one of them. They are not the same thing, and the old "open `index.html` to see the complete simulation" instruction undersold what's actually here — one of these two is a real, working system, not a simulation.
 
